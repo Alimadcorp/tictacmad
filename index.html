@@ -15,7 +15,6 @@
       margin: 0;
       background-color: #f0f0f0;
     }
-    
     .container {
       max-width: 500px;
       padding: 20px;
@@ -24,7 +23,6 @@
       box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
       text-align: center;
     }
-    
     .board {
       display: grid;
       grid-template-columns: repeat(3, 100px);
@@ -33,7 +31,6 @@
       margin: 20px auto;
       max-width: 315px;
     }
-    
     .cell {
       background-color: #e0e0e0;
       display: flex;
@@ -45,52 +42,42 @@
       border-radius: 5px;
       user-select: none;
     }
-    
     .cell:hover {
       background-color: #d0d0d0;
     }
-    
     .setup {
       margin-bottom: 20px;
     }
-    
     input, button {
       padding: 10px;
       margin: 5px;
       border-radius: 5px;
       border: 1px solid #ccc;
     }
-    
     button {
       background-color: #4CAF50;
       color: white;
       border: none;
       cursor: pointer;
     }
-    
     button:hover {
       background-color: #45a049;
     }
-    
     button:disabled {
       background-color: #cccccc;
       cursor: not-allowed;
     }
-    
     .status {
       margin: 10px 0;
       font-weight: bold;
       min-height: 20px;
     }
-    
     .player-info {
       margin-bottom: 10px;
     }
-    
     .cell.x {
       color: #FF5722;
     }
-    
     .cell.o {
       color: #2196F3;
     }
@@ -99,7 +86,6 @@
 <body>
   <div class="container">
     <h1>Multiplayer Tic Tac Toe</h1>
-    
     <div class="setup" id="setupScreen">
       <p>Create a new game or join an existing one</p>
       <div>
@@ -108,7 +94,6 @@
         <button id="joinGameBtn">Join Game</button>
       </div>
     </div>
-    
     <div id="gameScreen" style="display:none;">
       <div class="player-info" id="playerInfo"></div>
       <div class="status" id="gameStatus">Waiting for another player...</div>
@@ -130,7 +115,6 @@
       <p id="channelDisplay"></p>
     </div>
   </div>
-
   <script>
     class Madlogger {
       constructor(channel = 'none', key = null, testMode = false, mode = "default") {
@@ -142,7 +126,6 @@
         this.eventSource = null;
         this.init();
       }
-
       async init() {
         try {
           this.country = localStorage.getItem("madlogccache") || "Undefined";
@@ -156,7 +139,6 @@
             console.log('Failed to init', e);
         }
       }
-
       async log(text, status = 'log') {
         text = encodeURIComponent(text);
         const endpoint = `${this.url}/log`;
@@ -166,12 +148,10 @@
           country: this.country || 'Undefined',
           channel: this.channel,
         });
-
         const url = `${endpoint}?${params.toString()}`;
         if (this.testMode) {
           console.log('Logging', url);
         }
-
         try {
           const response = await fetch(url, {
             method: 'GET',
@@ -188,7 +168,6 @@
           return false;
         }
       }
-
       subscribe(onMessage, timestamp = 0, now = false) {
         const endpoint = `${this.url}/subscribe`;
         const params = new URLSearchParams({
@@ -196,12 +175,10 @@
           timestamp: new Date(timestamp).toISOString(),
           now: now.toString()
         });
-
         const url = `${endpoint}?${params.toString()}`;
         if (this.testMode) {
           console.log('Subscribing to', url);
         }
-
         try {
           this.eventSource = new EventSource(url);
           this.eventSource.onmessage = (event) => {
@@ -215,32 +192,28 @@
           this.eventSource.onerror = (e) => {
             console.warn('Subscription error', e);
             this.eventSource.close();
-            // Attempt to resubscribe after 2 seconds
             setTimeout(() => {
               console.log('Attempting to resubscribe...');
-              this.subscribe(onMessage, timestamp, now);
+              this.subscribe(onMessage, timestamp, true);
             }, 2000);
           };
           return this.eventSource;
         } catch (e) {
           if (!this.silent || this.testMode)
             console.warn('Failed to subscribe', e);
-          // Attempt to resubscribe after 2 seconds
           setTimeout(() => {
             console.log('Attempting to resubscribe after error...');
-            this.subscribe(onMessage, timestamp, now);
+            this.subscribe(onMessage, timestamp, true);
           }, 2000);
           return null;
         }
       }
-
       unsubscribe() {
         if (this.eventSource) {
           this.eventSource.close();
           this.eventSource = null;
         }
       }
-
       async getCountry() {
         try {
           const response = await fetch('https://api.country.is');
@@ -257,8 +230,6 @@
         }
       }
     }
-
-    // Game state
     const game = {
       channel: '',
       madlogger: null,
@@ -269,8 +240,6 @@
       playerId: Date.now().toString(36) + Math.random().toString(36).substring(2),
       players: []
     };
-
-    // DOM elements
     const setupScreen = document.getElementById('setupScreen');
     const gameScreen = document.getElementById('gameScreen');
     const channelInput = document.getElementById('channelInput');
@@ -283,85 +252,58 @@
     const leaveBtn = document.getElementById('leaveBtn');
     const channelDisplay = document.getElementById('channelDisplay');
     const cells = document.querySelectorAll('.cell');
-
-    // Initialize random channel suggestion
     channelInput.value = 'game-' + Math.floor(Math.random() * 9999);
-
-    // Event listeners
     createGameBtn.addEventListener('click', createGame);
     joinGameBtn.addEventListener('click', joinGame);
     resetBtn.addEventListener('click', resetGame);
     leaveBtn.addEventListener('click', leaveGame);
     cells.forEach(cell => cell.addEventListener('click', handleCellClick));
-
-    // Create a new game
     function createGame() {
       if (!channelInput.value) {
         alert('Please enter a channel name');
         return;
       }
-      
       game.channel = channelInput.value;
       game.playerSymbol = 'X';
-      setupMadlogger();
-      
+      setupMadlogger(false);
       switchToGameScreen();
       playerInfo.textContent = 'You are playing as X (goes first)';
       channelDisplay.textContent = `Channel: ${game.channel}`;
-      
-      // Announce creation to the channel
       game.madlogger.log(JSON.stringify({
         type: 'gameCreated',
         playerId: game.playerId,
         timestamp: Date.now()
       }));
     }
-
-    // Join an existing game
     function joinGame() {
       if (!channelInput.value) {
         alert('Please enter a channel name');
         return;
       }
-      
       game.channel = channelInput.value;
       game.playerSymbol = 'O';
-      setupMadlogger();
-      
+      setupMadlogger(true);
       switchToGameScreen();
       playerInfo.textContent = 'You are playing as O (goes second)';
       channelDisplay.textContent = `Channel: ${game.channel}`;
-      
-      // Announce joining to the channel
       game.madlogger.log(JSON.stringify({
         type: 'playerJoined',
         playerId: game.playerId,
         timestamp: Date.now()
       }));
     }
-
-    // Setup Madlogger
-    function setupMadlogger() {
+    function setupMadlogger(isJoining) {
       if (game.madlogger) {
         game.madlogger.unsubscribe();
       }
-      
       game.madlogger = new Madlogger(game.channel, null, false);
-      
-      // Subscribe to messages
-      game.madlogger.subscribe(handleMessage, 0, true);
+      game.madlogger.subscribe(handleMessage, 0, false);
     }
-
-    // Handle incoming messages
     function handleMessage(message) {
       if (!message || !message.text) return;
-      
       try {
         const data = JSON.parse(decodeURIComponent(message.text));
-        
-        // Avoid processing own messages
         if (data.playerId === game.playerId) return;
-        
         switch(data.type) {
           case 'gameCreated':
             if (game.playerSymbol === 'O') {
@@ -369,7 +311,6 @@
               game.gameActive = true;
             }
             break;
-            
           case 'playerJoined':
             if (game.playerSymbol === 'X') {
               gameStatus.textContent = 'Player O has joined! Your turn (X)';
@@ -377,15 +318,12 @@
               resetBtn.disabled = false;
             }
             break;
-            
           case 'move':
             handleOpponentMove(data);
             break;
-            
           case 'reset':
             handleGameReset();
             break;
-            
           case 'playerLeft':
             gameStatus.textContent = 'Other player left the game';
             game.gameActive = false;
@@ -396,53 +334,35 @@
         console.error('Error processing message:', e);
       }
     }
-
-    // Handle opponent's move
     function handleOpponentMove(data) {
       if (!game.gameActive) return;
-      
       const { index, symbol } = data;
-      
-      // Update board and UI
       game.board[index] = symbol;
       updateCell(index, symbol);
-      
-      // Check for win or draw
       if (checkWin()) {
         gameStatus.textContent = `Player ${symbol} wins!`;
         game.gameActive = false;
         resetBtn.disabled = false;
         return;
       }
-      
       if (checkDraw()) {
         gameStatus.textContent = 'Game ended in a draw!';
         game.gameActive = false;
         resetBtn.disabled = false;
         return;
       }
-      
-      // Update current player
       game.currentPlayer = game.playerSymbol;
       gameStatus.textContent = `Your turn (${game.playerSymbol})`;
     }
-
-    // Handle cell click
     function handleCellClick(e) {
       const index = e.target.dataset.index;
-      
-      // Check if valid move
       if (!game.gameActive || 
           game.currentPlayer !== game.playerSymbol || 
           game.board[index] !== '') {
         return;
       }
-      
-      // Update board and UI
       game.board[index] = game.playerSymbol;
       updateCell(index, game.playerSymbol);
-      
-      // Send move to opponent
       game.madlogger.log(JSON.stringify({
         type: 'move',
         playerId: game.playerId,
@@ -450,42 +370,32 @@
         symbol: game.playerSymbol,
         timestamp: Date.now()
       }));
-      
-      // Check for win or draw
       if (checkWin()) {
         gameStatus.textContent = `You win!`;
         game.gameActive = false;
         resetBtn.disabled = false;
         return;
       }
-      
       if (checkDraw()) {
         gameStatus.textContent = 'Game ended in a draw!';
         game.gameActive = false;
         resetBtn.disabled = false;
         return;
       }
-      
-      // Update current player
       game.currentPlayer = game.playerSymbol === 'X' ? 'O' : 'X';
       gameStatus.textContent = `Waiting for opponent's move...`;
     }
-
-    // Update cell in the UI
     function updateCell(index, symbol) {
       const cell = document.querySelector(`.cell[data-index="${index}"]`);
       cell.textContent = symbol;
       cell.classList.add(symbol.toLowerCase());
     }
-
-    // Check for win
     function checkWin() {
       const winPatterns = [
-        [0, 1, 2], [3, 4, 5], [6, 7, 8], // rows
-        [0, 3, 6], [1, 4, 7], [2, 5, 8], // columns
-        [0, 4, 8], [2, 4, 6]             // diagonals
+        [0, 1, 2], [3, 4, 5], [6, 7, 8],
+        [0, 3, 6], [1, 4, 7], [2, 5, 8],
+        [0, 4, 8], [2, 4, 6]
       ];
-      
       return winPatterns.some(pattern => {
         const [a, b, c] = pattern;
         return game.board[a] && 
@@ -493,108 +403,80 @@
                game.board[a] === game.board[c];
       });
     }
-
-    // Check for draw
     function checkDraw() {
       return game.board.every(cell => cell !== '');
     }
-
-    // Reset game
     function resetGame() {
-      // Clear board
       game.board = ['', '', '', '', '', '', '', '', ''];
       game.currentPlayer = 'X';
       game.gameActive = true;
-      
-      // Update UI
       cells.forEach(cell => {
         cell.textContent = '';
         cell.classList.remove('x', 'o');
       });
-      
       if (game.playerSymbol === 'X') {
         gameStatus.textContent = `Your turn (X)`;
       } else {
         gameStatus.textContent = `Waiting for opponent's move...`;
       }
-      
       resetBtn.disabled = true;
-      
-      // Send reset notification
       game.madlogger.log(JSON.stringify({
         type: 'reset',
         playerId: game.playerId,
         timestamp: Date.now()
       }));
     }
-
-    // Handle game reset from opponent
     function handleGameReset() {
-      // Clear board
       game.board = ['', '', '', '', '', '', '', '', ''];
       game.currentPlayer = 'X';
       game.gameActive = true;
-      
-      // Update UI
       cells.forEach(cell => {
         cell.textContent = '';
         cell.classList.remove('x', 'o');
       });
-      
       if (game.playerSymbol === 'X') {
         gameStatus.textContent = `Your turn (X)`;
       } else {
         gameStatus.textContent = `Waiting for opponent's move...`;
       }
-      
       resetBtn.disabled = true;
     }
-
-    // Leave game
     function leaveGame() {
-      // Notify other player
       if (game.madlogger) {
         game.madlogger.log(JSON.stringify({
           type: 'playerLeft',
           playerId: game.playerId,
           timestamp: Date.now()
         }));
-        
         game.madlogger.unsubscribe();
       }
-      
-      // Reset game state
       game.channel = '';
       game.madlogger = null;
       game.board = ['', '', '', '', '', '', '', '', ''];
       game.currentPlayer = 'X';
       game.playerSymbol = '';
       game.gameActive = false;
-      
+      cells.forEach(cell => {
+        cell.textContent = '';
+        cell.classList.remove('x', 'o');
+      });
       switchToSetupScreen();
     }
-
-    // UI helpers
     function switchToGameScreen() {
       setupScreen.style.display = 'none';
       gameScreen.style.display = 'block';
     }
-
     function switchToSetupScreen() {
       setupScreen.style.display = 'block';
       gameScreen.style.display = 'none';
     }
-
-    // Handle page unload
     window.addEventListener('beforeunload', () => {
       if (game.madlogger) {
-        // Notify other player
         game.madlogger.log(JSON.stringify({
           type: 'playerLeft',
           playerId: game.playerId,
           timestamp: Date.now()
         }));
-        
         game.madlogger.unsubscribe();
       }
     });
