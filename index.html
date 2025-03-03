@@ -81,15 +81,37 @@
     .cell.o {
       color: #2196F3;
     }
+    .copy-btn {
+      background-color: #2196F3;
+      padding: 5px 10px;
+      font-size: 12px;
+      margin-left: 10px;
+      vertical-align: middle;
+    }
+    .username-container {
+      margin-bottom: 15px;
+    }
+    .channel-display {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 15px 0;
+    }
+    .player-name {
+      font-weight: bold;
+    }
   </style>
 </head>
 <body>
   <div class="container">
     <h1>Multiplayer Tic Tac Toe</h1>
     <div class="setup" id="setupScreen">
+      <div class="username-container">
+        <input type="text" id="usernameInput" placeholder="Enter your username" maxlength="20">
+      </div>
       <p>Create a new game or join an existing one</p>
       <div>
-        <input type="text" id="channelInput" placeholder="Enter channel name">
+        <input type="text" id="channelInput" placeholder="Enter game code">
         <button id="createGameBtn">Create Game</button>
         <button id="joinGameBtn">Join Game</button>
       </div>
@@ -112,7 +134,10 @@
         <button id="resetBtn" disabled>Reset Game</button>
         <button id="leaveBtn">Leave Game</button>
       </div>
-      <p id="channelDisplay"></p>
+      <div class="channel-display">
+        <span>Game Code: <span id="displayCode"></span></span>
+        <button id="copyBtn" class="copy-btn">Copy</button>
+      </div>
     </div>
   </div>
   <script>
@@ -229,19 +254,52 @@
           return 'Undefined';
         }
       }
+      async clear(channel = this.channel) {
+        if (!this.key) {
+          console.error('No key provided for clear operation');
+          return false;
+        }
+        const endpoint = `${this.url}/clear`;
+        if (this.testMode) {
+          console.log('Clearing logs for channel', channel);
+        }
+        try {
+          const response = await fetch(endpoint, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': this.key
+            },
+            body: JSON.stringify({ channel })
+          });
+          if (this.testMode) {
+            console.log('Clear logs response', response);
+          }
+          return response.ok;
+        } catch (e) {
+          if (!this.silent || this.testMode)
+            console.warn('Failed to clear logs', e);
+          return false;
+        }
+      }
     }
     const game = {
       channel: '',
+      displayCode: '',
       madlogger: null,
       board: ['', '', '', '', '', '', '', '', ''],
       currentPlayer: 'X',
       playerSymbol: '',
       gameActive: false,
+      username: '',
       playerId: Date.now().toString(36) + Math.random().toString(36).substring(2),
-      players: []
+      otherPlayerName: 'Opponent',
+      playerCount: 1,
+      authKey: 'HelloAli(10)'
     };
     const setupScreen = document.getElementById('setupScreen');
     const gameScreen = document.getElementById('gameScreen');
+    const usernameInput = document.getElementById('usernameInput');
     const channelInput = document.getElementById('channelInput');
     const createGameBtn = document.getElementById('createGameBtn');
     const joinGameBtn = document.getElementById('joinGameBtn');
@@ -250,54 +308,85 @@
     const playerInfo = document.getElementById('playerInfo');
     const resetBtn = document.getElementById('resetBtn');
     const leaveBtn = document.getElementById('leaveBtn');
-    const channelDisplay = document.getElementById('channelDisplay');
+    const displayCode = document.getElementById('displayCode');
+    const copyBtn = document.getElementById('copyBtn');
     const cells = document.querySelectorAll('.cell');
-    channelInput.value = 'game-' + Math.floor(Math.random() * 9999);
+    generateRandomGameCode();
+    usernameInput.value = localStorage.getItem("tictacusername") || ('Player_' + Math.floor(Math.random() * 1000));
     createGameBtn.addEventListener('click', createGame);
     joinGameBtn.addEventListener('click', joinGame);
     resetBtn.addEventListener('click', resetGame);
     leaveBtn.addEventListener('click', leaveGame);
+    copyBtn.addEventListener('click', copyGameCode);
     cells.forEach(cell => cell.addEventListener('click', handleCellClick));
-    function createGame() {
-      if (!channelInput.value) {
-        alert('Please enter a channel name');
-        return;
+    function generateRandomGameCode() {
+      const randomCode = Math.random().toString(36).substring(2, 10).toUpperCase();
+      channelInput.value = randomCode;
+      return randomCode;
+    }
+    function copyGameCode() {
+      navigator.clipboard.writeText(game.displayCode).then(() => {
+        const originalText = copyBtn.textContent;
+        copyBtn.textContent = 'Copied!';
+        setTimeout(() => {
+          copyBtn.textContent = originalText;
+        }, 2000);
+      });
+    }
+    function validateUsername() {
+      const username = usernameInput.value.trim();
+      if (!username) {
+        alert('Please enter a username');
+        return false;
       }
-      game.channel = channelInput.value;
+      game.username = username;
+      localStorage.setItem("tictacusername", username);
+      return true;
+    }
+    function createGame() {
+      if (!validateUsername()) return;
+      const gameCode = channelInput.value.trim() || generateRandomGameCode();
+      game.displayCode = gameCode;
+      game.channel = 'tictacmad-' + gameCode;
       game.playerSymbol = 'X';
       setupMadlogger(false);
       switchToGameScreen();
-      playerInfo.textContent = 'You are playing as X (goes first)';
-      channelDisplay.textContent = `Channel: ${game.channel}`;
+      playerInfo.textContent = `You are playing as X (goes first)`;
+      displayCode.textContent = game.displayCode;
       game.madlogger.log(JSON.stringify({
         type: 'gameCreated',
         playerId: game.playerId,
+        username: game.username,
         timestamp: Date.now()
       }));
     }
     function joinGame() {
-      if (!channelInput.value) {
-        alert('Please enter a channel name');
+      if (!validateUsername()) return;
+      const gameCode = channelInput.value.trim();
+      if (!gameCode) {
+        alert('Please enter a game code');
         return;
       }
-      game.channel = channelInput.value;
+      game.displayCode = gameCode;
+      game.channel = 'tictacmad-' + gameCode;
       game.playerSymbol = 'O';
-      setupMadlogger(true);
+      setupMadlogger(false);
       switchToGameScreen();
-      playerInfo.textContent = 'You are playing as O (goes second)';
-      channelDisplay.textContent = `Channel: ${game.channel}`;
+      playerInfo.textContent = `You are playing as O (goes second)`;
+      displayCode.textContent = game.displayCode;
       game.madlogger.log(JSON.stringify({
         type: 'playerJoined',
         playerId: game.playerId,
+        username: game.username,
         timestamp: Date.now()
       }));
     }
-    function setupMadlogger(isJoining) {
+    function setupMadlogger(useNow) {
       if (game.madlogger) {
         game.madlogger.unsubscribe();
       }
-      game.madlogger = new Madlogger(game.channel, null, false);
-      game.madlogger.subscribe(handleMessage, 0, false);
+      game.madlogger = new Madlogger(game.channel, game.authKey, false);
+      game.madlogger.subscribe(handleMessage, 0, useNow);
     }
     function handleMessage(message) {
       if (!message || !message.text) return;
@@ -307,15 +396,19 @@
         switch(data.type) {
           case 'gameCreated':
             if (game.playerSymbol === 'O') {
-              gameStatus.textContent = 'Game created! You go second (O)';
+              game.otherPlayerName = data.username || 'Opponent';
+              gameStatus.textContent = `${game.otherPlayerName} created the game! You go second (O)`;
               game.gameActive = true;
+              game.playerCount = 2;
             }
             break;
           case 'playerJoined':
             if (game.playerSymbol === 'X') {
-              gameStatus.textContent = 'Player O has joined! Your turn (X)';
+              game.otherPlayerName = data.username || 'Opponent';
+              gameStatus.textContent = `${game.otherPlayerName} joined! Your turn (X)`;
               game.gameActive = true;
               resetBtn.disabled = false;
+              game.playerCount = 2;
             }
             break;
           case 'move':
@@ -325,9 +418,13 @@
             handleGameReset();
             break;
           case 'playerLeft':
-            gameStatus.textContent = 'Other player left the game';
+            game.playerCount--;
+            gameStatus.textContent = `${data.username || 'Other player'} left the game`;
             game.gameActive = false;
             resetBtn.disabled = false;
+            if (game.playerCount <= 0) {
+              clearChannel();
+            }
             break;
         }
       } catch (e) {
@@ -340,7 +437,7 @@
       game.board[index] = symbol;
       updateCell(index, symbol);
       if (checkWin()) {
-        gameStatus.textContent = `Player ${symbol} wins!`;
+        gameStatus.textContent = `${game.otherPlayerName} wins!`;
         game.gameActive = false;
         resetBtn.disabled = false;
         return;
@@ -366,6 +463,7 @@
       game.madlogger.log(JSON.stringify({
         type: 'move',
         playerId: game.playerId,
+        username: game.username,
         index: index,
         symbol: game.playerSymbol,
         timestamp: Date.now()
@@ -383,7 +481,7 @@
         return;
       }
       game.currentPlayer = game.playerSymbol === 'X' ? 'O' : 'X';
-      gameStatus.textContent = `Waiting for opponent's move...`;
+      gameStatus.textContent = `Waiting for ${game.otherPlayerName}'s move...`;
     }
     function updateCell(index, symbol) {
       const cell = document.querySelector(`.cell[data-index="${index}"]`);
@@ -417,12 +515,13 @@
       if (game.playerSymbol === 'X') {
         gameStatus.textContent = `Your turn (X)`;
       } else {
-        gameStatus.textContent = `Waiting for opponent's move...`;
+        gameStatus.textContent = `Waiting for ${game.otherPlayerName}'s move...`;
       }
       resetBtn.disabled = true;
       game.madlogger.log(JSON.stringify({
         type: 'reset',
         playerId: game.playerId,
+        username: game.username,
         timestamp: Date.now()
       }));
     }
@@ -437,30 +536,51 @@
       if (game.playerSymbol === 'X') {
         gameStatus.textContent = `Your turn (X)`;
       } else {
-        gameStatus.textContent = `Waiting for opponent's move...`;
+        gameStatus.textContent = `Waiting for ${game.otherPlayerName}'s move...`;
       }
       resetBtn.disabled = true;
     }
+    function clearChannel() {
+      if (game.madlogger && game.madlogger.key) {
+        console.log('Clearing channel:', game.channel);
+        game.madlogger.clear(game.channel);
+      }
+    }
     function leaveGame() {
+      cells.forEach(cell => {
+        cell.textContent = '';
+        cell.classList.remove('x', 'o');
+      });
+      if (game.playerSymbol === 'X') {
+        gameStatus.textContent = `Your turn (X)`;
+      } else {
+        gameStatus.textContent = `Waiting for ${game.otherPlayerName}'s move...`;
+      }
+      resetBtn.disabled = true;
       if (game.madlogger) {
         game.madlogger.log(JSON.stringify({
           type: 'playerLeft',
           playerId: game.playerId,
+          username: game.username,
           timestamp: Date.now()
         }));
+        game.playerCount--;
+        if (game.playerCount <= 0) {
+          clearChannel();
+        }
         game.madlogger.unsubscribe();
       }
       game.channel = '';
+      game.displayCode = '';
       game.madlogger = null;
       game.board = ['', '', '', '', '', '', '', '', ''];
       game.currentPlayer = 'X';
       game.playerSymbol = '';
       game.gameActive = false;
-      cells.forEach(cell => {
-        cell.textContent = '';
-        cell.classList.remove('x', 'o');
-      });
+      game.otherPlayerName = 'Opponent';
+      game.playerCount = 1;
       switchToSetupScreen();
+      generateRandomGameCode();
     }
     function switchToGameScreen() {
       setupScreen.style.display = 'none';
@@ -475,8 +595,13 @@
         game.madlogger.log(JSON.stringify({
           type: 'playerLeft',
           playerId: game.playerId,
+          username: game.username,
           timestamp: Date.now()
         }));
+        game.playerCount--;
+        if (game.playerCount <= 0) {
+          clearChannel();
+        }
         game.madlogger.unsubscribe();
       }
     });
