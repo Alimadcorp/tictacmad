@@ -1,0 +1,395 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Multiplayer Tic Tac Toe</title>
+    <style>
+      body {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        height: 100vh;
+        margin: 0;
+        font-family: Arial, sans-serif;
+        background-color: #f0f0f0;
+      }
+      .container {
+        text-align: center;
+      }
+      .game-board {
+        display: grid;
+        grid-template-columns: repeat(3, 80px);
+        grid-template-rows: repeat(3, 80px);
+        gap: 5px;
+        margin: 20px auto;
+      }
+      .cell {
+        width: 80px;
+        height: 80px;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        background-color: #fff;
+        border: 1px solid #ccc;
+        font-size: 32px;
+        cursor: pointer;
+      }
+      .cell:hover {
+        background-color: #f9f9f9;
+      }
+      #status {
+        margin-top: 20px;
+        font-size: 18px;
+        color: #333;
+        font-weight: 700;
+      }
+      #game-code {
+        margin: 10px 0;
+        font-size: 16px;
+      }
+      input {
+        padding: 8px;
+        margin: 5px;
+      }
+      button {
+        padding: 8px 16px;
+        margin: 5px;
+        background-color: #4caf50;
+        color: #fff;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+      }
+      button:hover {
+        background-color: #45a049;
+      }
+      #player-info {
+        margin-bottom: 10px;
+      }
+      .player-x {
+        color: #ff5722;
+      }
+      .player-o {
+        color: #2196f3;
+      }
+      .hidden {
+        display: none;
+      }
+      .menu-buttons {
+        margin: 15px 0;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h1>Multiplayer Tic Tac Toe</h1>
+      <div id="menu" class="menu">
+        <h2>Join or Create Game</h2>
+        <div>
+          <input
+            type="text"
+            id="nickname"
+            placeholder="Your Nickname"
+            maxlength="15"
+          />
+          <div class="menu-buttons">
+            <button id="create-game">Create New Game</button>
+            <div>
+              <input
+                type="text"
+                id="join-code"
+                placeholder="Game Code"
+              /><button id="join-game">Join Game</button>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div id="game" class="hidden">
+        <div id="player-info">You are: <span id="player-symbol"></span></div>
+        <div id="game-code"></div>
+        <div id="status">Waiting for opponent...</div>
+        <div id="game-board" class="game-board"></div>
+        <button id="reset-game" class="hidden">New Game</button
+        ><button id="leave-game">Leave Game</button>
+      </div>
+    </div>
+    <script>
+      class MadloggerMinified {
+        constructor(e = "none", t = !1) {
+          (this.url = "https://madlog.vercel.app/api"),
+            (this.testMode = t),
+            (this.channel = e),
+            this.init();
+        }
+        async init() {
+          try {
+            (this.country =
+              localStorage.getItem("madlogccache") || "Undefined"),
+              (this.country = await this.getCountry()),
+              localStorage.setItem("madlogccache", this.country);
+          } catch (e) {}
+        }
+        async log(e, t = "log") {
+          e = encodeURIComponent(e + ", " + document.location);
+          let n = `${this.url}/log`,
+            r = new URLSearchParams({
+              text: e,
+              status: t,
+              country: this.country || "Undefined",
+              channel: this.channel,
+            }),
+            o = `${n}?${r.toString()}`;
+          try {
+            return (await fetch(o, { method: "GET", mode: "cors" })).ok;
+          } catch (e) {
+            return !1;
+          }
+        }
+        async getCountry() {
+          try {
+            return (
+              (await (await fetch("https://api.country.is")).json()).country ||
+              "Undefined"
+            );
+          } catch (e) {
+            return "Undefined";
+          }
+        }
+        subscribe(e, t = 0) {
+          let n = `${this.url}/subscribe`,
+            r = new URLSearchParams({
+              channel: this.channel,
+              timestamp: new Date(t).toISOString(),
+              now: "false",
+            }),
+            o = `${n}?${r.toString()}`;
+          let i = null,
+            a = [],
+            s = !1,
+            c = async () => {
+              if (!s) {
+                for (s = !0; a.length > 0; ) {
+                  for (let t = 0; t < 10 && a.length > 0; t++) {
+                    let n = a.shift();
+                    e && e(n);
+                  }
+                  await new Promise((e) => setTimeout(e, 30));
+                }
+                s = !1;
+              }
+            },
+            l = () => {
+              (this.eventSource = new EventSource(o)),
+                (this.eventSource.onopen = () => {
+                  e && e({ type: "system", message: "Connected" });
+                }),
+                (this.eventSource.onmessage = (t) => {
+                  let n = JSON.parse(t.data);
+                  (!n.id || n.id !== i) && ((i = n.id), a.push(n), c());
+                }),
+                (this.eventSource.onerror = () => {
+                  this.eventSource.close(),
+                    setTimeout(() => {
+                      e && e({ type: "system", message: "Reconnecting" }), l();
+                    }, 5e3);
+                });
+            };
+          l();
+        }
+        unsubscribe() {
+          this.eventSource &&
+            (this.eventSource.close(), (this.eventSource = null));
+        }
+      }
+      document.addEventListener("DOMContentLoaded", () => {
+        const e = document.getElementById("menu"),
+          t = document.getElementById("game"),
+          n = document.getElementById("game-board"),
+          r = document.getElementById("status"),
+          o = document.getElementById("game-code"),
+          i = document.getElementById("player-symbol"),
+          a = document.getElementById("create-game"),
+          s = document.getElementById("join-game"),
+          c = document.getElementById("nickname"),
+          l = document.getElementById("join-code"),
+          d = document.getElementById("reset-game"),
+          u = document.getElementById("leave-game");
+        let g = new MadloggerMinified("ttt-multiplayer"),
+          m = "",
+          p = "",
+          f = "",
+          y = null,
+          h = [],
+          I = Array(9).fill(null),
+          b = !1,
+          v = !1;
+        function S() {
+          for (let e = 0; e < 9; e++) {
+            const t = document.createElement("div");
+            t.classList.add("cell"),
+              (t.dataset.index = e),
+              t.addEventListener("click", E),
+              n.appendChild(t);
+          }
+        }
+        function w(e) {
+          let t = {
+            type: "game",
+            action: "move",
+            gameId: m,
+            player: p,
+            position: e,
+          };
+          (I[e] = p), C("me", e), g.log(JSON.stringify(t)), A();
+        }
+        function E(e) {
+          const t = e.target,
+            n = parseInt(t.dataset.index);
+          I[n] || b || v || p !== y || w(n);
+        }
+        function C(e, t) {
+          const o = n.querySelector(`[data-index="${t}"]`),
+            i = y === "X" ? "player-x" : "player-o";
+          (o.textContent = y),
+            o.classList.add(i),
+            "me" === e
+              ? (r.textContent = "Waiting for opponent...")
+              : "opponent" === e && (r.textContent = "Your turn");
+        }
+        function A() {
+          if (k())
+            return (
+              (r.textContent = p === y ? `You win!` : `Opponent wins!`),
+              (v = !0),
+              g.log(`Game over: ${y} wins`),
+              void d.classList.remove("hidden")
+            );
+          I.every((e) => null !== e) &&
+            !v &&
+            ((r.textContent = "It's a draw!"),
+            (v = !0),
+            g.log("Game over: Draw"),
+            d.classList.remove("hidden"));
+        }
+        function k() {
+          const e = [
+            [0, 1, 2],
+            [3, 4, 5],
+            [6, 7, 8],
+            [0, 3, 6],
+            [1, 4, 7],
+            [2, 5, 8],
+            [0, 4, 8],
+            [2, 4, 6],
+          ];
+          return e.some(
+            (e) => I[e[0]] && I[e[0]] === I[e[1]] && I[e[0]] === I[e[2]]
+          );
+        }
+        function B() {
+          I.fill(null),
+            n.querySelectorAll(".cell").forEach((e) => {
+              (e.textContent = ""), e.classList.remove("player-x", "player-o");
+            }),
+            (v = !1),
+            (b = !1),
+            (r.textContent = p === y ? "Your turn" : "Waiting for opponent..."),
+            d.classList.add("hidden"),
+            g.log(
+              JSON.stringify({
+                type: "game",
+                action: "reset",
+                gameId: m,
+                player: p,
+              })
+            );
+        }
+        function G() {
+          g.log(
+            JSON.stringify({
+              type: "game",
+              action: "join",
+              gameId: m,
+              player: p,
+              nickname: f || "Anonymous",
+            })
+          ),
+            (b = !0),
+            (r.textContent = "Connecting...");
+        }
+        function L() {
+          e.classList.add("hidden"), t.classList.remove("hidden");
+          i.textContent = p;
+          i.classList.add(p === "X" ? "player-x" : "player-o");
+          o.textContent = `Game Code: ${m}`;
+          G();
+        }
+        function T() {
+          g.unsubscribe(),
+            t.classList.add("hidden"),
+            e.classList.remove("hidden"),
+            (n.innerHTML = ""),
+            (m = ""),
+            (p = ""),
+            (h = []),
+            I.fill(null),
+            (v = !1),
+            (b = !1);
+        }
+        function j(e) {
+          if ("system" === e.type) return;
+          "game" === e.type &&
+            (function (e) {
+              try {
+                const t = JSON.parse(e.text);
+                if ("join" === t.action && t.gameId === m) {
+                  if (t.player !== p) {
+                    let e = t.nickname || "Anonymous";
+                    (r.textContent =
+                      p === y
+                        ? `Your turn (vs ${e})`
+                        : `Waiting for opponent (vs ${e})`),
+                      (b = !1);
+                  }
+                } else if (
+                  "move" === t.action &&
+                  t.gameId === m &&
+                  t.player !== p
+                ) {
+                  const e = t.position;
+                  (I[e] = t.player),
+                    C("opponent", e),
+                    (y = t.player),
+                    (r.textContent = "Your turn"),
+                    (b = !1),
+                    A();
+                } else
+                  "reset" === t.action &&
+                    t.gameId === m &&
+                    t.player !== p &&
+                    B();
+              } catch (e) {
+                console.error("Error parsing message:", e);
+              }
+            })(e);
+        }
+        a.addEventListener("click", () => {
+          if (!c.value) return alert("Please enter a nickname");
+          f = c.value;
+          const e = Math.random().toString(36).substring(2, 8).toUpperCase();
+          (m = e), (p = "X"), (y = "X"), S(), L();
+        }),
+          s.addEventListener("click", () => {
+            const e = l.value.trim().toUpperCase();
+            if (!e) return alert("Please enter a game code");
+            if (!c.value) return alert("Please enter a nickname");
+            (f = c.value), (m = e), (p = "O"), (y = "X"), S(), L();
+          }),
+          d.addEventListener("click", B),
+          u.addEventListener("click", T),
+          g.subscribe(j);
+      });
+    </script>
+  </body>
+</html>
