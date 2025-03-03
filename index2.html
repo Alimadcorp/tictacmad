@@ -224,8 +224,6 @@
         authKey: "HelloAli(10)",
         lastGame: null,
       };
-
-      // DOM elements
       const els = {
         setupScreen: document.getElementById("setupScreen"),
         gameScreen: document.getElementById("gameScreen"),
@@ -249,15 +247,12 @@
         activeGamesList: document.getElementById("activeGamesList"),
         sizeBtns: document.querySelectorAll(".size-btn"),
       };
-
-      // Initial setup
       generateRandomGameCode();
       checkLastGame();
       checkThemePreference();
       els.usernameInput.value =
         localStorage.getItem("tictacusername") ||
         "Player_" + Math.floor(Math.random() * 1000);
-
       // Event listeners
       els.createGameBtn.addEventListener("click", createGame);
       els.joinGameBtn.addEventListener("click", joinGame);
@@ -267,7 +262,6 @@
       els.copyBtn.addEventListener("click", copyGameCode);
       els.themeToggleBtn.addEventListener("click", toggleTheme);
       els.rejoinGameBtn.addEventListener("click", rejoinGame);
-
       // Board size selection
       els.sizeBtns.forEach((btn) => {
         btn.addEventListener("click", () => {
@@ -276,18 +270,14 @@
           game.boardSize = parseInt(btn.dataset.size);
         });
       });
-
       // Games directory
       const gamesDirectory = new Madlogger("tictacgames", game.authKey, false);
       fetchActiveGames();
-
       function setupGameBoard() {
         els.gameBoard.innerHTML = "";
         game.board = Array(game.boardSize * game.boardSize).fill("");
-
         els.gameBoard.style.gridTemplateColumns = `repeat(${game.boardSize},1fr)`;
         els.gameBoard.style.gridTemplateRows = `repeat(${game.boardSize},1fr)`;
-
         for (let i = 0; i < game.board.length; i++) {
           const cell = document.createElement("div");
           cell.classList.add("cell");
@@ -296,7 +286,6 @@
           els.gameBoard.appendChild(cell);
         }
       }
-
       function checkLastGame() {
         const lastGame = localStorage.getItem("lastTicTacGame");
         if (lastGame) {
@@ -315,25 +304,20 @@
           }
         }
       }
-
       function rejoinGame() {
         if (!game.lastGame) return;
         if (!validateUsername()) return;
-
         game.displayCode = game.lastGame.code;
         game.channel = "tictacmad-" + game.lastGame.code;
         game.playerSymbol = game.lastGame.symbol;
         game.boardSize = game.lastGame.boardSize || 3;
-
         setupMadlogger(true);
         switchToGameScreen();
         setupGameBoard();
-
         els.playerInfo.textContent = `You are playing as ${
           game.playerSymbol
         } (${game.playerSymbol === "X" ? "goes first" : "goes second"})`;
         els.displayCode.textContent = game.displayCode;
-
         game.madlogger.log(
           JSON.stringify({
             type: "playerRejoined",
@@ -344,21 +328,17 @@
           })
         );
       }
-
       function fetchActiveGames() {
         const gamesLogger = new Madlogger("tictacgames", null, false);
         gamesLogger.subscribe(handleGamesDirectory, 0, true);
-
         setTimeout(() => {
           if (els.activeGamesList.children.length > 0) {
             els.activeGamesContainer.style.display = "block";
           }
         }, 1000);
       }
-
       function handleGamesDirectory(message) {
         if (!message || !message.text) return;
-
         try {
           const data = JSON.parse(decodeURIComponent(message.text));
           if (
@@ -369,18 +349,15 @@
             gameItem.classList.add("game-item");
             gameItem.textContent = `Game: ${data.code} (${data.players}/2)`;
             gameItem.dataset.code = data.code;
-
             const joinBtn = document.createElement("button");
             joinBtn.textContent = "Join";
             joinBtn.addEventListener("click", () => {
               els.channelInput.value = data.code;
               joinGame();
             });
-
             gameItem.appendChild(joinBtn);
             els.activeGamesList.appendChild(gameItem);
             els.activeGamesContainer.style.display = "block";
-
             setTimeout(() => {
               gameItem.remove();
               if (els.activeGamesList.children.length === 0) {
@@ -392,7 +369,6 @@
           console.error("Error processing games directory message:", e);
         }
       }
-
       function generateRandomGameCode() {
         const randomCode = Math.random()
           .toString(36)
@@ -401,7 +377,6 @@
         els.channelInput.value = randomCode;
         return randomCode;
       }
-
       function copyGameCode() {
         navigator.clipboard.writeText(game.displayCode).then(() => {
           const originalText = els.copyBtn.textContent;
@@ -411,7 +386,6 @@
           }, 2000);
         });
       }
-
       function validateUsername() {
         const username = els.usernameInput.value.trim();
         if (!username) {
@@ -422,14 +396,12 @@
         localStorage.setItem("tictacusername", username);
         return true;
       }
-
       function checkThemePreference() {
         const darkMode = localStorage.getItem("tictacDarkMode") === "true";
         if (darkMode) {
           document.body.classList.add("dark-mode");
         }
       }
-
       function toggleTheme() {
         document.body.classList.toggle("dark-mode");
         localStorage.setItem(
@@ -437,374 +409,291 @@
           document.body.classList.contains("dark-mode")
         );
       }
-
       function createGame() {
-  if (!validateUsername()) return;
-
-  const gameCode =
-    els.channelInput.value.trim() || generateRandomGameCode();
-  game.displayCode = gameCode;
-  game.channel = "tictacmad-" + gameCode;
-  game.playerSymbol = "X";
-
-  saveLastGame();
-  setupMadlogger(false);
-  switchToGameScreen();
-  setupGameBoard();
-
-  els.playerInfo.textContent = `You are playing as X (goes first)`;
-  els.displayCode.textContent = game.displayCode;
-
-  gamesDirectory.log(
-    JSON.stringify({
-      type: "gameAvailable",
-      code: gameCode,
-      players: 1,
-      boardSize: game.boardSize,
-      timestamp: Date.now(),
-    })
-  );
-
-  game.madlogger.log(
-    JSON.stringify({
-      type: "gameCreated",
-      playerId: game.playerId,
-      username: game.username,
-      boardSize: game.boardSize,
-      timestamp: Date.now(),
-    })
-  );
-}
-
-function joinGame() {
-  if (!validateUsername()) return;
-
-  const gameCode = els.channelInput.value.trim();
-  if (!gameCode) {
-    alert("Please enter a game code");
-    return;
-  }
-
-  game.displayCode = gameCode;
-  game.channel = "tictacmad-" + gameCode;
-  game.playerSymbol = "O";
-
-  saveLastGame();
-  setupMadlogger(false);
-  switchToGameScreen();
-  setupGameBoard();
-
-  els.playerInfo.textContent = `You are playing as O (goes second)`;
-  els.displayCode.textContent = game.displayCode;
-
-  gamesDirectory.log(
-    JSON.stringify({
-      type: "gameJoined",
-      code: gameCode,
-      players: 2,
-      timestamp: Date.now(),
-    })
-  );
-
-  game.madlogger.log(
-    JSON.stringify({
-      type: "playerJoined",
-      playerId: game.playerId,
-      username: game.username,
-      timestamp: Date.now(),
-    })
-  );
-}
-
-function joinRandomGame() {
-  if (!validateUsername()) return;
-
-  const tempLogger = new Madlogger("tictacgames", null, false);
-  let foundGame = false;
-
-  tempLogger.subscribe(
-    (message) => {
-      if (foundGame) return;
-
-      try {
-        const data = JSON.parse(decodeURIComponent(message.text));
-        if (
-          data.type === "gameAvailable" &&
-          data.players === 1 &&
-          Date.now() - data.timestamp < 60000
-        ) {
-          foundGame = true;
-          tempLogger.unsubscribe();
-
-          els.channelInput.value = data.code;
-          game.boardSize = data.boardSize || 3;
-          joinGame();
-        }
-      } catch (e) {
-        console.error("Error processing random game message:", e);
-      }
-    },
-    0,
-    true
-  );
-
-  setTimeout(() => {
-    if (!foundGame) {
-      tempLogger.unsubscribe();
-      createGame();
-    }
-  }, 2000);
-}
-
-function saveLastGame() {
-  localStorage.setItem(
-    "lastTicTacGame",
-    JSON.stringify({
-      code: game.displayCode,
-      symbol: game.playerSymbol,
-      boardSize: game.boardSize,
-      timestamp: Date.now(),
-    })
-  );
-}
-
-function setupMadlogger(useNow) {
-  if (game.madlogger) {
-    game.madlogger.unsubscribe();
-  }
-
-  game.madlogger = new Madlogger(game.channel, game.authKey, false);
-  game.madlogger.subscribe(handleMessage, 0, useNow);
-}
-
-function handleMessage(message) {
-  if (!message || !message.text) return;
-
-  try {
-    const data = JSON.parse(decodeURIComponent(message.text));
-    if (data.playerId === game.playerId) return;
-
-    switch (data.type) {
-      case "gameCreated":
-        if (game.playerSymbol === "O") {
-          game.otherPlayerName = data.username || "Opponent";
-          els.gameStatus.textContent = `${game.otherPlayerName} created the game! You go second (O)`;
-          game.gameActive = true;
-          game.playerCount = 2;
-          game.boardSize = data.boardSize || 3;
-          setupGameBoard();
-        }
-        break;
-
-      case "playerJoined":
-        if (game.playerSymbol === "X") {
-          game.otherPlayerName = data.username || "Opponent";
-          els.gameStatus.textContent = `${game.otherPlayerName} joined! Your turn (X)`;
-          game.gameActive = true;
-          els.resetBtn.disabled = false;
-          game.playerCount = 2;
-        }
-        break;
-
-      case "playerRejoined":
-        if (data.symbol !== game.playerSymbol) {
-          game.otherPlayerName = data.username || "Opponent";
-          els.gameStatus.textContent = `${
-            game.otherPlayerName
-          } rejoined! ${
-            game.currentPlayer === game.playerSymbol
-              ? "Your turn"
-              : "Waiting for opponent's move"
-          }`;
-          game.gameActive = true;
-          game.playerCount = 2;
-        }
-        break;
-
-      case "move":
-        handleOpponentMove(data);
-        break;
-
-      case "reset":
-        handleGameReset();
-        break;
-
-      case "playerLeft":
-        game.playerCount--;
-        els.gameStatus.textContent = `${
-          data.username || "Other player"
-        } left the game`;
-        game.gameActive = false;
-        els.resetBtn.disabled = false;
-
+        if (!validateUsername()) return;
+        const gameCode =
+          els.channelInput.value.trim() || generateRandomGameCode();
+        game.displayCode = gameCode;
+        game.channel = "tictacmad-" + gameCode;
+        game.playerSymbol = "X";
+        saveLastGame();
+        setupMadlogger(false);
+        switchToGameScreen();
+        setupGameBoard();
+        els.playerInfo.textContent = `You are playing as X (goes first)`;
+        els.displayCode.textContent = game.displayCode;
         gamesDirectory.log(
           JSON.stringify({
             type: "gameAvailable",
-            code: game.displayCode,
+            code: gameCode,
             players: 1,
             boardSize: game.boardSize,
             timestamp: Date.now(),
           })
         );
-
-        if (game.playerCount <= 0) {
-          clearChannel();
+        game.madlogger.log(
+          JSON.stringify({
+            type: "gameCreated",
+            playerId: game.playerId,
+            username: game.username,
+            boardSize: game.boardSize,
+            timestamp: Date.now(),
+          })
+        );
+      }
+      function joinGame() {
+        if (!validateUsername()) return;
+        const gameCode = els.channelInput.value.trim();
+        if (!gameCode) {
+          alert("Please enter a game code");
+          return;
         }
-        break;
-
-      case "boardState":
-        if (data.board && Array.isArray(data.board)) {
-          game.board = data.board;
-          game.currentPlayer = data.currentPlayer;
-          game.boardSize = Math.sqrt(data.board.length);
-          setupGameBoard();
-          updateBoardDisplay();
-
-          if (game.currentPlayer === game.playerSymbol) {
-            els.gameStatus.textContent = `Your turn (${game.playerSymbol})`;
-          } else {
-            els.gameStatus.textContent = `Waiting for ${game.otherPlayerName}'s move...`;
+        game.displayCode = gameCode;
+        game.channel = "tictacmad-" + gameCode;
+        game.playerSymbol = "O";
+        saveLastGame();
+        setupMadlogger(false);
+        switchToGameScreen();
+        setupGameBoard();
+        els.playerInfo.textContent = `You are playing as O (goes second)`;
+        els.displayCode.textContent = game.displayCode;
+        gamesDirectory.log(
+          JSON.stringify({
+            type: "gameJoined",
+            code: gameCode,
+            players: 2,
+            timestamp: Date.now(),
+          })
+        );
+        game.madlogger.log(
+          JSON.stringify({
+            type: "playerJoined",
+            playerId: game.playerId,
+            username: game.username,
+            timestamp: Date.now(),
+          })
+        );
+      }
+      function joinRandomGame() {
+        if (!validateUsername()) return;
+        const tempLogger = new Madlogger("tictacgames", null, false);
+        let foundGame = false;
+        tempLogger.subscribe(
+          (message) => {
+            if (foundGame) return;
+            try {
+              const data = JSON.parse(decodeURIComponent(message.text));
+              if (
+                data.type === "gameAvailable" &&
+                data.players === 1 &&
+                Date.now() - data.timestamp < 60000
+              ) {
+                foundGame = true;
+                tempLogger.unsubscribe();
+                els.channelInput.value = data.code;
+                game.boardSize = data.boardSize || 3;
+                joinGame();
+              }
+            } catch (e) {
+              console.error("Error processing random game message:", e);
+            }
+          },
+          0,
+          true
+        );
+        setTimeout(() => {
+          if (!foundGame) {
+            tempLogger.unsubscribe();
+            createGame();
           }
-
-          game.gameActive = data.gameActive;
-          if (!game.gameActive) {
-            els.resetBtn.disabled = false;
-          }
+        }, 2000);
+      }
+      function saveLastGame() {
+        localStorage.setItem(
+          "lastTicTacGame",
+          JSON.stringify({
+            code: game.displayCode,
+            symbol: game.playerSymbol,
+            boardSize: game.boardSize,
+            timestamp: Date.now(),
+          })
+        );
+      }
+      function setupMadlogger(useNow) {
+        if (game.madlogger) {
+          game.madlogger.unsubscribe();
         }
-        break;
-    }
-  } catch (e) {
-    console.error("Error processing message:", e);
-  }
-}
-
-function updateBoardDisplay() {
-  const cells = document.querySelectorAll(".cell");
-  cells.forEach((cell, index) => {
-    const value = game.board[index];
-    cell.textContent = value;
-    cell.classList.remove("x", "o");
-    if (value) {
-      cell.classList.add(value.toLowerCase());
-    }
-  });
-}
-
-function handleOpponentMove(data) {
-  if (!game.gameActive) return;
-
-  const { index, symbol } = data;
-  
-  // Only update the specific cell that was changed by the opponent
-  // Preserve all other cells' values
-  game.board[index] = symbol;
-  
-  // Update display for all cells
-  updateBoardDisplay();
-
-  // Send board state back to confirm receipt of move
-  game.madlogger.log(
-    JSON.stringify({
-      type: "boardState",
-      playerId: game.playerId,
-      board: game.board,
-      currentPlayer: game.playerSymbol,
-      gameActive: true,
-      timestamp: Date.now(),
-    })
-  );
-
-  if (checkWin()) {
-    els.gameStatus.textContent = `${game.otherPlayerName} wins!`;
-    game.gameActive = false;
-    els.resetBtn.disabled = false;
-    return;
-  }
-
-  if (checkDraw()) {
-    els.gameStatus.textContent = "Game ended in a draw!";
-    game.gameActive = false;
-    els.resetBtn.disabled = false;
-    return;
-  }
-
-  game.currentPlayer = game.playerSymbol;
-  els.gameStatus.textContent = `Your turn (${game.playerSymbol})`;
-}
-
-function handleCellClick(e) {
-  const index = parseInt(e.target.dataset.index);
-
-  if (
-    !game.gameActive ||
-    game.currentPlayer !== game.playerSymbol ||
-    game.board[index] !== ""
-  ) {
-    return;
-  }
-
-  game.board[index] = game.playerSymbol;
-  updateCell(index, game.playerSymbol);
-
-  game.madlogger.log(
-    JSON.stringify({
-      type: "move",
-      playerId: game.playerId,
-      username: game.username,
-      index: index,
-      symbol: game.playerSymbol,
-      timestamp: Date.now(),
-    })
-  );
-
-  // Check win before sending board state
-  const isWin = checkWin();
-  const isDraw = !isWin && checkDraw();
-  const gameActive = !isWin && !isDraw;
-
-  // Share board state
-  game.madlogger.log(
-    JSON.stringify({
-      type: "boardState",
-      playerId: game.playerId,
-      board: game.board,
-      currentPlayer: game.playerSymbol === "X" ? "O" : "X",
-      gameActive: gameActive,
-      timestamp: Date.now(),
-    })
-  );
-
-  if (isWin) {
-    els.gameStatus.textContent = `You win!`;
-    game.gameActive = false;
-    els.resetBtn.disabled = false;
-    return;
-  }
-
-  if (isDraw) {
-    els.gameStatus.textContent = "Game ended in a draw!";
-    game.gameActive = false;
-    els.resetBtn.disabled = false;
-    return;
-  }
-
-  game.currentPlayer = game.playerSymbol === "X" ? "O" : "X";
-  els.gameStatus.textContent = `Waiting for ${game.otherPlayerName}'s move...`;
-}
-
-function updateCell(index, symbol) {
-  const cell = document.querySelector(`.cell[data-index="${index}"]`);
-  if (cell) {
-    cell.textContent = symbol;
-    cell.classList.remove("x", "o");
-    cell.classList.add(symbol.toLowerCase());
-  }
-}
-
+        game.madlogger = new Madlogger(game.channel, game.authKey, false);
+        game.madlogger.subscribe(handleMessage, 0, useNow);
+      }
+      function handleMessage(message) {
+        if (!message || !message.text) return;
+        try {
+          const data = JSON.parse(decodeURIComponent(message.text));
+          if (data.playerId === game.playerId) return;
+          switch (data.type) {
+            case "gameCreated":
+              if (game.playerSymbol === "O") {
+                game.otherPlayerName = data.username || "Opponent";
+                els.gameStatus.textContent = `${game.otherPlayerName} created the game! You go second (O)`;
+                game.gameActive = true;
+                game.playerCount = 2;
+                game.boardSize = data.boardSize || 3;
+                setupGameBoard();
+              }
+              break;
+            case "playerJoined":
+              if (game.playerSymbol === "X") {
+                game.otherPlayerName = data.username || "Opponent";
+                els.gameStatus.textContent = `${game.otherPlayerName} joined! Your turn (X)`;
+                game.gameActive = true;
+                els.resetBtn.disabled = false;
+                game.playerCount = 2;
+              }
+              break;
+            case "playerRejoined":
+              if (data.symbol !== game.playerSymbol) {
+                game.otherPlayerName = data.username || "Opponent";
+                els.gameStatus.textContent = `${
+                  game.otherPlayerName
+                } rejoined! ${
+                  game.currentPlayer === game.playerSymbol
+                    ? "Your turn"
+                    : "Waiting for opponent's move"
+                }`;
+                game.gameActive = true;
+                game.playerCount = 2;
+              }
+              break;
+            case "move":
+              handleOpponentMove(data);
+              break;
+            case "reset":
+              handleGameReset();
+              break;
+            case "playerLeft":
+              game.playerCount--;
+              els.gameStatus.textContent = `${
+                data.username || "Other player"
+              } left the game`;
+              game.gameActive = false;
+              els.resetBtn.disabled = false;
+              gamesDirectory.log(
+                JSON.stringify({
+                  type: "gameAvailable",
+                  code: game.displayCode,
+                  players: 1,
+                  boardSize: game.boardSize,
+                  timestamp: Date.now(),
+                })
+              );
+              if (game.playerCount <= 0) {
+                clearChannel();
+              }
+              break;
+            case "boardState":
+              if (data.board && Array.isArray(data.board)) {
+                game.board = data.board;
+                game.currentPlayer = data.currentPlayer;
+                game.boardSize = Math.sqrt(data.board.length);
+                setupGameBoard();
+                updateBoardDisplay();
+                if (game.currentPlayer === game.playerSymbol) {
+                  els.gameStatus.textContent = `Your turn (${game.playerSymbol})`;
+                } else {
+                  els.gameStatus.textContent = `Waiting for ${game.otherPlayerName}'s move...`;
+                }
+                game.gameActive = data.gameActive;
+                if (!game.gameActive) {
+                  els.resetBtn.disabled = false;
+                }
+              }
+              break;
+          }
+        } catch (e) {
+          console.error("Error processing message:", e);
+        }
+      }
+      function updateBoardDisplay() {
+        const cells = document.querySelectorAll(".cell");
+        cells.forEach((cell, index) => {
+          const value = game.board[index];
+          cell.textContent = value;
+          if (value) {
+            cell.classList.add(value.toLowerCase());
+          }
+        });
+      }
+      function handleOpponentMove(data) {
+        if (!game.gameActive) return;
+        const { index, symbol } = data;
+        game.board[index] = symbol;
+        updateBoardDisplay();
+        if (checkWin()) {
+          els.gameStatus.textContent = `${game.otherPlayerName} wins!`;
+          game.gameActive = false;
+          els.resetBtn.disabled = false;
+          return;
+        }
+        if (checkDraw()) {
+          els.gameStatus.textContent = "Game ended in a draw!";
+          game.gameActive = false;
+          els.resetBtn.disabled = false;
+          return;
+        }
+        game.currentPlayer = game.playerSymbol;
+        els.gameStatus.textContent = `Your turn (${game.playerSymbol})`;
+      }
+      function handleCellClick(e) {
+        const index = parseInt(e.target.dataset.index);
+        if (
+          !game.gameActive ||
+          game.currentPlayer !== game.playerSymbol ||
+          game.board[index] !== ""
+        ) {
+          return;
+        }
+        game.board[index] = game.playerSymbol;
+        updateCell(index, game.playerSymbol);
+        game.madlogger.log(
+          JSON.stringify({
+            type: "move",
+            playerId: game.playerId,
+            username: game.username,
+            index: index,
+            symbol: game.playerSymbol,
+            timestamp: Date.now(),
+          })
+        );
+        const isWin = checkWin();
+        const isDraw = !isWin && checkDraw();
+        const gameActive = !isWin && !isDraw;
+        if (isWin) {
+          els.gameStatus.textContent = `You win!`;
+          game.gameActive = false;
+          els.resetBtn.disabled = false;
+          return;
+        }
+        if (isDraw) {
+          els.gameStatus.textContent = "Game ended in a draw!";
+          game.gameActive = false;
+          els.resetBtn.disabled = false;
+          return;
+        }
+        game.currentPlayer = game.playerSymbol === "X" ? "O" : "X";
+        els.gameStatus.textContent = `Waiting for ${game.otherPlayerName}'s move...`;
+      }
+      function updateCell(index, symbol) {
+        const cell = document.querySelector(`.cell[data-index="${index}"]`);
+        if (cell) {
+          cell.textContent = symbol;
+          cell.classList.remove("x", "o");
+          cell.classList.add(symbol.toLowerCase());
+        }
+      }
       function checkWin() {
         const size = game.boardSize;
         const winPatterns = [];
-
         // Rows
         for (let i = 0; i < size; i++) {
           const row = [];
@@ -813,7 +702,6 @@ function updateCell(index, symbol) {
           }
           winPatterns.push(row);
         }
-
         // Columns
         for (let i = 0; i < size; i++) {
           const col = [];
@@ -822,7 +710,6 @@ function updateCell(index, symbol) {
           }
           winPatterns.push(col);
         }
-
         // Diagonals
         const diag1 = [];
         const diag2 = [];
@@ -832,37 +719,30 @@ function updateCell(index, symbol) {
         }
         winPatterns.push(diag1);
         winPatterns.push(diag2);
-
         return winPatterns.some((pattern) => {
           const firstVal = game.board[pattern[0]];
           if (!firstVal) return false;
           return pattern.every((index) => game.board[index] === firstVal);
         });
       }
-
       function checkDraw() {
         return game.board.every((cell) => cell !== "");
       }
-
       function resetGame() {
         game.board = Array(game.boardSize * game.boardSize).fill("");
         game.currentPlayer = "X";
         game.gameActive = true;
-
         const cells = document.querySelectorAll(".cell");
         cells.forEach((cell) => {
           cell.textContent = "";
           cell.classList.remove("x", "o");
         });
-
         if (game.playerSymbol === "X") {
           els.gameStatus.textContent = `Your turn (X)`;
         } else {
           els.gameStatus.textContent = `Waiting for ${game.otherPlayerName}'s move...`;
         }
-
         els.resetBtn.disabled = true;
-
         game.madlogger.log(
           JSON.stringify({
             type: "reset",
@@ -871,8 +751,6 @@ function updateCell(index, symbol) {
             timestamp: Date.now(),
           })
         );
-
-        // Share board state
         game.madlogger.log(
           JSON.stringify({
             type: "boardState",
@@ -884,64 +762,30 @@ function updateCell(index, symbol) {
           })
         );
       }
-
       function handleGameReset() {
         game.board = Array(game.boardSize * game.boardSize).fill("");
         game.currentPlayer = "X";
         game.gameActive = true;
-
         const cells = document.querySelectorAll(".cell");
         cells.forEach((cell) => {
           cell.textContent = "";
           cell.classList.remove("x", "o");
         });
-
         if (game.playerSymbol === "X") {
           els.gameStatus.textContent = `Your turn (X)`;
         } else {
           els.gameStatus.textContent = `Waiting for ${game.otherPlayerName}'s move...`;
         }
-
         els.resetBtn.disabled = true;
       }
-
       function clearChannel() {
         if (game.madlogger && game.madlogger.key) {
           console.log("Clearing channel:", game.channel);
           game.madlogger.clear(game.channel);
         }
       }
-
       function leaveGame() {
-        if (game.madlogger) {
-          game.madlogger.log(
-            JSON.stringify({
-              type: "playerLeft",
-              playerId: game.playerId,
-              username: game.username,
-              timestamp: Date.now(),
-            })
-          );
-
-          game.playerCount--;
-
-          gamesDirectory.log(
-            JSON.stringify({
-              type: "gameLeft",
-              code: game.displayCode,
-              timestamp: Date.now(),
-            })
-          );
-
-          if (game.playerCount <= 0) {
-            clearChannel();
-          }
-
-          game.madlogger.unsubscribe();
-        }
-
-        localStorage.removeItem("lastTicTacGame");
-
+        switchToGameScreen();
         game.channel = "";
         game.displayCode = "";
         game.madlogger = null;
@@ -951,22 +795,40 @@ function updateCell(index, symbol) {
         game.gameActive = false;
         game.otherPlayerName = "Opponent";
         game.playerCount = 1;
-
-        switchToGameScreen();
         generateRandomGameCode();
         els.rejoinContainer.style.display = "none";
+        if (game.madlogger) {
+          game.madlogger.log(
+            JSON.stringify({
+              type: "playerLeft",
+              playerId: game.playerId,
+              username: game.username,
+              timestamp: Date.now(),
+            })
+          );
+          game.playerCount--;
+          gamesDirectory.log(
+            JSON.stringify({
+              type: "gameLeft",
+              code: game.displayCode,
+              timestamp: Date.now(),
+            })
+          );
+          if (game.playerCount <= 0) {
+            clearChannel();
+          }
+          game.madlogger.unsubscribe();
+        }
+        localStorage.removeItem("lastTicTacGame");
       }
-
       function switchToGameScreen() {
         els.setupScreen.style.display = "none";
         els.gameScreen.style.display = "block";
       }
-
       function switchToSetupScreen() {
         els.setupScreen.style.display = "block";
         els.gameScreen.style.display = "none";
       }
-
       window.addEventListener("beforeunload", () => {
         if (game.madlogger) {
           game.madlogger.log(
@@ -977,13 +839,10 @@ function updateCell(index, symbol) {
               timestamp: Date.now(),
             })
           );
-
           game.playerCount--;
-
           if (game.playerCount <= 0) {
             clearChannel();
           }
-
           game.madlogger.unsubscribe();
         }
       });
