@@ -221,7 +221,7 @@
           Date.now().toString(36) + Math.random().toString(36).substring(2),
         otherPlayerName: "Opponent",
         playerCount: 1,
-        authKey: "HelloAli(10)",
+        authKey: "HelloAli10",
         lastGame: null,
       };
       const els = {
@@ -785,18 +785,6 @@
         }
       }
       function leaveGame() {
-        switchToGameScreen();
-        game.channel = "";
-        game.displayCode = "";
-        game.madlogger = null;
-        game.board = [];
-        game.currentPlayer = "X";
-        game.playerSymbol = "";
-        game.gameActive = false;
-        game.otherPlayerName = "Opponent";
-        game.playerCount = 1;
-        generateRandomGameCode();
-        els.rejoinContainer.style.display = "none";
         if (game.madlogger) {
           game.madlogger.log(
             JSON.stringify({
@@ -819,6 +807,18 @@
           }
           game.madlogger.unsubscribe();
         }
+        game.channel = "";
+        game.displayCode = "";
+        game.madlogger = null;
+        game.board = [];
+        game.currentPlayer = "X";
+        game.playerSymbol = "";
+        game.gameActive = false;
+        game.otherPlayerName = "Opponent";
+        game.playerCount = 1;
+        generateRandomGameCode();
+        els.rejoinContainer.style.display = "none";
+        switchToSetupScreen();
         localStorage.removeItem("lastTicTacGame");
       }
       function switchToGameScreen() {
