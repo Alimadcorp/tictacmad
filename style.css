@@ -1,0 +1,181 @@
+body {
+    font-family: Arial, sans-serif;
+    margin: 0;
+    padding: 0;
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background-color: #f0f0f0;
+    transition: background-color 0.3s, color 0.3s;
+}
+
+.container {
+    width: 90%;
+    max-width: 500px;
+    padding: 20px;
+    background-color: white;
+    border-radius: 10px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    text-align: center;
+    transition: background-color 0.3s, box-shadow 0.3s;
+}
+
+.board {
+    display: grid;
+    gap: 5px;
+    margin: 20px auto;
+}
+
+.board-3 { grid-template-columns: repeat(3, 1fr); }
+.board-4 { grid-template-columns: repeat(4, 1fr); }
+.board-5 { grid-template-columns: repeat(5, 1fr); }
+.board-6 { grid-template-columns: repeat(6, 1fr); }
+
+.cell {
+    background-color: #e0e0e0;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-weight: bold;
+    cursor: pointer;
+    border-radius: 5px;
+    user-select: none;
+    transition: background-color 0.3s;
+    aspect-ratio: 1;
+}
+
+.cell:hover { background-color: #d0d0d0; }
+.cell.x { color: #FF5722; }
+.cell.o { color: #2196F3; }
+
+.setup { margin-bottom: 20px; }
+.board-options { margin: 15px 0; }
+.board-size-buttons {
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    margin-bottom: 15px;
+}
+
+.size-btn {
+    padding: 8px 15px;
+    border-radius: 5px;
+    border: 1px solid #ccc;
+    background-color: black;
+    cursor: pointer;
+    transition: all 0.3s;
+}
+
+.size-btn.active {
+    background-color: #4CAF50;
+    color: white;
+    border-color: #45a049;
+}
+
+input, button {
+    padding: 10px;
+    margin: 5px;
+    border-radius: 5px;
+    border: 1px solid #ccc;
+    transition: background-color 0.3s, color 0.3s, border-color 0.3s;
+}
+
+button {
+    background-color: #4CAF50;
+    color: white;
+    border: none;
+    cursor: pointer;
+}
+
+button:hover { background-color: #45a049; }
+button:disabled {
+    background-color: #cccccc;
+    cursor: not-allowed;
+}
+
+.status { margin: 10px 0; font-weight: bold; }
+.player-info { margin-bottom: 10px; }
+.copy-btn {
+    background-color: #2196F3;
+    padding: 5px 10px;
+    font-size: 12px;
+    margin-left: 10px;
+}
+
+.username-container { margin-bottom: 15px; }
+.channel-display {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 15px 0;
+}
+
+.theme-toggle { margin-bottom: 15px; }
+#themeToggleBtn { background-color: #333; }
+
+.active-games-list {
+    max-height: 150px;
+    overflow-y: auto;
+    margin: 10px 0;
+    border: 1px solid #ccc;
+    border-radius: 5px;
+    padding: 10px;
+}
+
+.game-item {
+    padding: 8px;
+    margin: 5px 0;
+    border-radius: 5px;
+    background-color: #f9f9f9;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.join-button {
+    background-color: #2196F3;
+    padding: 5px 10px;
+    font-size: 12px;
+}
+
+/* Dark Mode */
+body.dark-mode {
+    background-color: #222;
+    color: #fff;
+}
+
+body.dark-mode .container {
+    background-color: #333;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+}
+
+body.dark-mode input {
+    background-color: #444;
+    color: #fff;
+    border-color: #555;
+}
+
+body.dark-mode .cell { background-color: #444; }
+body.dark-mode .cell:hover { background-color: #555; }
+body.dark-mode #themeToggleBtn { background-color: #f0f0f0; color: #333; }
+body.dark-mode .game-item { background-color: #444; color: #fff; }
+body.dark-mode .cell.x { color: #FF7043; }
+body.dark-mode .cell.o { color: #64B5F6; }
+
+/* Mobile Responsiveness */
+@media (max-width: 600px) {
+    .cell { font-size: 24px; }
+    .board-3 { grid-template-columns: repeat(3, 80px); }
+    .board-4 { grid-template-columns: repeat(4, 60px); }
+    .board-5 { grid-template-columns: repeat(5, 50px); }
+    .board-6 { grid-template-columns: repeat(6, 40px); }
+}
+
+@media (max-width: 480px) {
+    .cell { font-size: 20px; }
+    .board-3 { grid-template-columns: repeat(3, 70px); }
+    .board-4 { grid-template-columns: repeat(4, 50px); }
+    .board-5 { grid-template-columns: repeat(5, 40px); }
+    .board-6 { grid-template-columns: repeat(6, 35px); }
+}

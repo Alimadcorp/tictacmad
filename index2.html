@@ -3,17 +3,22 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Multiplayer Tic Tac Toe</title>
-    <link rel="stylesheet" href="styles.css" />
+    <meta property="og:title" content="Tic" Tac Mad />
+    <meta property="og:site_name" content="Tic" Tac Mad />
+    <meta property="og:url" content=https://alimadcorp.github.io/tictacmad>
+    <meta property="og:description" content=Play onine multiplayer Tic Tac Toe
+    on Mr Bruh's own server! Game supports up to 6 by 6 Tic Tac Toe boards!>
+    <meta property="og:type" content="" />
+    <meta property="og:image"
+    content=https://play-lh.googleusercontent.com/zPxLgj5nvl20ahJV7aFC6S5mD8kii5CEEDj25j1P9CYAfXL9sdDuO-8eES0r4DhJHrU>
+    <link rel="stylesheet" href="style.css" />
   </head>
   <body>
     <div class="container">
-      <h1>Multiplayer Tic Tac Toe</h1>
-      <div class="theme-toggle">
-        <button id="themeToggleBtn">Toggle Dark Mode</button>
-      </div>
+      <h1>Tic Tac Mad</h1>
       <div class="setup" id="setupScreen">
         <div class="username-container">
+          <label for="usernameInput">Enter Username: </label>
           <input
             type="text"
             id="usernameInput"
@@ -45,6 +50,9 @@
         <div id="activeGamesContainer" style="display: none; margin-top: 15px">
           <h3>Available Games</h3>
           <div id="activeGamesList" class="active-games-list"></div>
+        </div>
+        <div class="theme-toggle">
+          <button id="themeToggleBtn">Toggle Dark Mode</button>
         </div>
       </div>
       <div id="gameScreen" style="display: none">
@@ -347,7 +355,7 @@
           ) {
             const gameItem = document.createElement("div");
             gameItem.classList.add("game-item");
-            gameItem.textContent = `Game: ${data.code} (${data.players}/2)`;
+            gameItem.textContent = `Game: ${data.code} (${data.players}/2) Hosted by ${data.username}`;
             gameItem.dataset.code = data.code;
             const joinBtn = document.createElement("button");
             joinBtn.textContent = "Join";
@@ -427,6 +435,7 @@
             type: "gameAvailable",
             code: gameCode,
             players: 1,
+            username: game.username,
             boardSize: game.boardSize,
             timestamp: Date.now(),
           })
